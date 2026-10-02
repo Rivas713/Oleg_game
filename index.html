@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Олег Юрьевич и формулы</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { overflow-x: hidden; }
+  body {
+    font-family: 'Courier New', monospace;
+    background: #2a5d3a;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(0,0,0,0.2) 0%, transparent 50%);
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    color: #f5f5dc;
+  }
+  h1 {
+    font-size: clamp(20px, 5vw, 28px);
+    margin-bottom: 6px;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .subtitle { font-size: clamp(11px, 3vw, 14px); opacity: 0.85; margin-bottom: 14px; text-align: center; padding: 0 10px; }
+
+  .board {
+    width: 100%;
+    max-width: 700px;
+    background: #3a7d4a;
+    border: 10px solid #8b5a2b;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  .arena {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 260px;
+    position: relative;
+    margin-bottom: 15px;
+    border-bottom: 3px dashed rgba(255,255,255,0.2);
+  }
+
+  .player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 45%;
+  }
+
+  .oleg {
+    font-size: clamp(60px, 15vw, 90px);
+    transition: transform 0.2s, filter 0.3s;
+    filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.4));
+  }
+  .oleg.hurt { animation: shake 0.4s; filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.4)) brightness(1.5) sepia(1) hue-rotate(-30deg); }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    20% { transform: translateX(-15px) rotate(-8deg); }
+    40% { transform: translateX(15px) rotate(8deg); }
+    60% { transform: translateX(-10px) rotate(-5deg); }
+    80% { transform: translateX(10px) rotate(5deg); }
+  }
+  .oleg.dead { transform: rotate(90deg) translateY(30px); opacity: 0.6; }
+
+  .hp-bar {
+    width: 100%;
+    max-width: 180px;
+    height: 22px;
+    background: #1a1a1a;
+    border: 2px solid #f5f5dc;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 8px;
+    position: relative;
+  }
+  .hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff3b30, #ffcc00, #34c759);
+    transition: width 0.5s ease-out;
+  }
+  .hp-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
+  }
+
+  .name-tag {
+    font-size: clamp(11px, 3vw, 14px);
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  .thrower {
+    font-size: clamp(50px, 12vw, 70px);
+    transition: transform 0.3s;
+  }
+  .thrower.throwing { animation: throw 0.5s; }
+  @keyframes throw {
+    0% { transform: rotate(0); }
+    50% { transform: rotate(-30deg) translateX(-20px); }
+    100% { transform: rotate(0); }
+  }
+
+  .flying-formula {
+    position: absolute;
+    font-size: clamp(16px, 4vw, 22px);
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 0 0 8px #ffeb3b, 0 0 15px #ff9800;
+    pointer-events: none;
+    transition: all 0.8s cubic-bezier(0.5, -0.3, 0.7, 1.2);
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  .damage-popup {
+    position: absolute;
+    font-size: clamp(22px, 6vw, 32px);
+    font-weight: bold;
+    color: #ff3b30;
+    text-shadow: 2px 2px 0 #000;
+    animation: floatUp 1.2s forwards;
+    pointer-events: none;
+    z-index: 20;
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    20% { transform: translateY(-20px) scale(1.3); opacity: 1; }
+    100% { transform: translateY(-100px) scale(1); opacity: 0; }
+  }
+
+  .info {
+    display: flex;
+    justify-content: space-between;
+    font-size: clamp(11px, 2.8vw, 14px);
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .info span { background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 4px; }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid #f5f5dc;
+    color: #f5f5dc;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus { border-color: #ffeb3b; box-shadow: 0 0 10px rgba(255,235,59,0.5); }
+  input[type="text"].error {
+    animation: inputShake 0.5s;
+    border-color: #ff3b30 !important;
+    box-shadow: 0 0 15px rgba(255,59,48,0.6) !important;
+  }
+  @keyframes inputShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+  }
+  button {
+    padding: 12px 18px;
+    font-size: 15px;
+    font-family: inherit;
+    background: #f5f5dc;
+    color: #2a5d3a;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.1s;
+    white-space: nowrap;
+  }
+  button:hover:not(:disabled) { transform: translateY(-2px); background: #ffeb3b; }
+  button:active:not(:disabled) { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #throwBtn { background: #ff6b6b; color: #fff; }
+  #throwBtn:hover:not(:disabled) { background: #ff3b30; }
+
+  /* === TOAST УВЕДОМЛЕНИЕ === */
+  .toast {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #ff3b30, #c0392b);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .toast-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .toast-text {
+    flex: 1;
+    line-height: 1.3;
+  }
+  .toast-formula {
+    display: block;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 2px;
+    background: rgba(0,0,0,0.25);
+    padding: 2px 6px;
+    border-radius: 3px;
+    word-break: break-all;
+  }
+
+  /* === КЛАВИАТУРА СПЕЦСИМВОЛОВ === */
+  .keyboard {
+    background: rgba(0,0,0,0.35);
+    border: 2px solid rgba(245,245,220,0.3);
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+  .kb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 0 4px;
+  }
+  .kb-title {
+    font-size: 12px;
+    opacity: 0.8;
+    letter-spacing: 1px;
+  }
+  .kb-toggle {
+    background: transparent;
+    color: #f5f5dc;
+    border: none;
+    font-size: 12px;
+    padding: 2px 8px;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .kb-toggle:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+
+  .kb-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .kb-tab {
+    background: rgba(255,255,255,0.08);
+    color: #f5f5dc;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .kb-tab:hover { background: rgba(255,255,255,0.15); }
+  .kb-tab.active {
+    background: #ffeb3b;
+    color: #2a5d3a;
+    border-color: #ffeb3b;
+    font-weight: bold;
+  }
+
+  .kb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    gap: 4px;
+  }
+  .kb-key {
+    background: rgba(245,245,220,0.12);
+    color: #ffeb3b;
+    border: 1px solid rgba(245,245,220,0.25);
+    border-radius: 6px;
+    padding: 8px 4px;
+    font-size: 18px;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.1s;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .kb-key:hover {
+    background: rgba(255,235,59,0.25);
+    border-color: #ffeb3b;
+    transform: translateY(-1px);
+  }
+  .kb-key:active {
+    transform: translateY(1px) scale(0.95);
+    background: #ffeb3b;
+    color: #2a5d3a;
+  }
+  .kb-key.action {
+    background: rgba(255,107,107,0.2);
+    color: #ff6b6b;
+    border-color: rgba(255,107,107,0.4);
+    font-size: 14px;
+  }
+  .kb-key.action:hover { background: rgba(255,107,107,0.35); }
+  .kb-key.action:active { background: #ff6b6b; color: #fff; }
+
+  .kb-key.space {
+    grid-column: span 2;
+    font-size: 12px;
+  }
+
+  .keyboard.collapsed .kb-body { display: none; }
+  .keyboard.collapsed { padding: 6px 8px; }
+
+  .history {
+    max-height: 120px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.25);
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .history-item {
+    padding: 3px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .history-item .formula-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+  .history-item .dmg { color: #ff6b6b; font-weight: bold; flex-shrink: 0; }
+
+  .hint {
+    font-size: clamp(10px, 2.5vw, 12px);
+    opacity: 0.8;
+    margin-top: 10px;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .hint code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #ffeb3b;
+  }
+
+  .message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.9);
+    padding: 25px 30px;
+    border-radius: 12px;
+    border: 3px solid #ffeb3b;
+    text-align: center;
+    z-index: 100;
+    display: none;
+    width: 90%;
+    max-width: 350px;
+  }
+  .message h2 { font-size: clamp(22px, 6vw, 32px); margin-bottom: 10px; color: #ffeb3b; }
+  .message p { margin-bottom: 15px; font-size: 14px; line-height: 1.5; }
+  .message.show { display: block; animation: popIn 0.4s; }
+  @keyframes popIn {
+    from { transform: translate(-50%, -50%) scale(0); }
+    to { transform: translate(-50%, -50%) scale(1); }
+  }
+
+  /* === МОБИЛЬНАЯ АДАПТАЦИЯ === */
+  @media (max-width: 600px) {
+    body { padding: 10px 8px; }
+    .board { padding: 12px 10px; border-width: 8px; }
+    .arena {
+      height: 220px;
+      flex-direction: row;
+      align-items: flex-end;
+    }
+    .player { width: 48%; }
+    .controls { flex-direction: column; }
+    .controls button { width: 100%; padding: 14px; }
+    .controls input[type="text"] { width: 100%; }
+    .toast { font-size: 13px; padding: 10px 12px; }
+    .info { font-size: 12px; }
+    .info span { padding: 4px 8px; }
+    .history { max-height: 150px; }
+    .kb-grid { grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); }
+    .kb-key { font-size: 17px; min-height: 36px; padding: 7px 3px; }
+  }
+
+  @media (max-width: 380px) {
+    .arena { height: 200px; }
+    .oleg { font-size: 60px; }
+    .thrower { font-size: 50px; }
+    .hp-bar { height: 20px; }
+    .kb-grid { grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); gap: 3px; }
+    .kb-key { font-size: 16px; min-height: 34px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>📚 ЗАБРОСАЙ ОЛЕГА ЮРЬЕВИЧА 📚</h1>
+<div class="subtitle">Пиши физические формулы — чем сложнее, тем больнее!</div>
+
+<div class="board">
+  <div class="info">
+    <span>💥 Урон: <b id="lastDmg">—</b></span>
+    <span>📝 Формул: <b id="usedCount">0</b></span>
+    <span>🎯 Рекорд: <b id="maxDiff">0</b></span>
+  </div>
+
+  <div class="arena" id="arena">
+    <div class="player">
+      <div class="thrower" id="thrower">🧑‍🎓</div>
+      <div class="name-tag">Ты</div>
+    </div>
+    <div class="player">
+      <div class="oleg" id="oleg">🧑‍🏫</div>
+      <div class="hp-bar">
+        <div class="hp-fill" id="hpFill" style="width:100%"></div>
+        <div class="hp-text" id="hpText">100 / 100</div>
+      </div>
+      <div class="name-tag">Олег Юрьевич</div>
+    </div>
+    <div class="message" id="message">
+      <h2 id="msgTitle">ПОБЕДА!</h2>
+      <p id="msgText">Олег Юрьевич повержен!</p>
+      <button onclick="resetGame()">🔄 Новая игра</button>
+    </div>
+  </div>
+
+  <div class="controls" id="controlsWrap">
+    <input type="text" id="formulaInput" placeholder="Например: E = mc²" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button id="throwBtn" onclick="throwFormula()">🚀 КИНУТЬ!</button>
+    <button onclick="resetGame()" title="Новая игра">🔄</button>
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+      <span class="toast-icon">⚠️</span>
+      <span class="toast-text">
+        <span id="toastMsg">Эта формула уже использована!</span>
+        <span class="toast-formula" id="toastFormula"></span>
+      </span>
+    </div>
+  </div>
+
+  <!-- КЛАВИАТУРА СПЕЦСИМВОЛОВ -->
+  <div class="keyboard" id="keyboard">
+    <div class="kb-header">
+      <span class="kb-title">⌨️ СПЕЦСИМВОЛЫ</span>
+      <button class="kb-toggle" id="kbToggle" onclick="toggleKeyboard()">свернуть ▲</button>
+    </div>
+    <div class="kb-body" id="kbBody">
+      <div class="kb-tabs" id="kbTabs"></div>
+      <div class="kb-grid" id="kbGrid"></div>
+    </div>
+  </div>
+
+  <div class="hint">
+    💡 Примеры: <code>F=ma</code> <code>E=mc²</code> <code>λ=h/p</code> <code>∇×E=-∂B/∂t</code>
+  </div>
+
+  <div class="history" id="history"></div>
+</div>
+
+<script>
+const MAX_HP = 100;
+let hp = MAX_HP;
+const usedFormulas = new Set();
+let maxDifficulty = 0;
+let toastTimer = null;
+
+const oleg = document.getElementById('oleg');
+const thrower = document.getElementById('thrower');
+const hpFill = document.getElementById('hpFill');
+const hpText = document.getElementById('hpText');
+const formulaInput = document.getElementById('formulaInput');
+const arena = document.getElementById('arena');
+const history = document.getElementById('history');
+const message = document.getElementById('message');
+const msgTitle = document.getElementById('msgTitle');
+const msgText = document.getElementById('msgText');
+const toast = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMsg');
+const toastFormula = document.getElementById('toastFormula');
+
+// === TOAST УВЕДОМЛЕНИЕ ===
+function showToast(msg, formula) {
+  // Сбрасываем предыдущий таймер
+  if (toastTimer) {
+    clearTimeout(toastTimer);
+    toast.classList.remove('show');
+  }
+
+  toastMsg.textContent = msg;
+  toastFormula.textContent = formula || '';
+  toastFormula.style.display = formula ? 'block' : 'none';
+
+  // Трясём поле ввода
+  formulaInput.classList.remove('error');
+  // Форсируем reflow чтобы анимация перезапустилась
+  void formulaInput.offsetWidth;
+  formulaInput.classList.add('error');
+  setTimeout(() => formulaInput.classList.remove('error'), 500);
+
+  // Показываем тост
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+    toastTimer = null;
+  }, 3500);
+}
+
+// === ДАННЫЕ КЛАВИАТУРЫ ===
+const keyboardGroups = {
+  'Степени': ['²','³','⁴','⁵','⁶','⁷','⁸','⁹','⁰','¹'],
+  'Греческие': ['α','β','γ','δ','ε','θ','λ','μ','π','ρ','σ','φ','ψ','ω','Δ','Σ','Ω','Φ','Ψ'],
+  'Математика': ['∫','∑','∏','∂','∇','√','∞','±','×','÷','·','≈','≠','≤','≥','∈','⊂','∪','∩'],
+  'Индексы': ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉','ₙ','ₓ','ᵢ','ⱼ'],
+  'Квант': ['ℏ','ħ','Ĥ','ψ','∮','⊗','⊕','†','⟨','⟩','→','↔','∝']
+};
+let currentGroup = 'Математика';
+
+function renderKeyboardTabs() {
+  const tabs = document.getElementById('kbTabs');
+  tabs.innerHTML = '';
+  for (const name of Object.keys(keyboardGroups)) {
+    const btn = document.createElement('button');
+    btn.className = 'kb-tab' + (name === currentGroup ? ' active' : '');
+    btn.textContent = name;
+    btn.onclick = () => {
+      currentGroup = name;
+      renderKeyboardTabs();
+      renderKeyboardGrid();
+    };
+    tabs.appendChild(btn);
+  }
+}
+
+function renderKeyboardGrid() {
+  const grid = document.getElementById('kbGrid');
+  grid.innerHTML = '';
+  const symbols = keyboardGroups[currentGroup];
+  for (const sym of symbols) {
+    const btn = document.createElement('button');
+    btn.className = 'kb-key';
+    btn.textContent = sym;
+    btn.type = 'button';
+    btn.onclick = () => insertSymbol(sym);
+    grid.appendChild(btn);
+  }
+  const actions = [
+    { label: '␣', cls: 'space', action: () => insertSymbol(' ') },
+    { label: '=', cls: '', action: () => insertSymbol('=') },
+    { label: '⌫', cls: 'action', action: () => deleteLast() },
+    { label: '✕', cls: 'action', action: () => clearInput() }
+  ];
+  for (const a of actions) {
+    const btn = document.createElement('button');
+    btn.className = 'kb-key ' + a.cls;
+    btn.textContent = a.label;
+    btn.type = 'button';
+    btn.onclick = a.action;
+    grid.appendChild(btn);
+  }
+}
+
+function insertSymbol(sym) {
+  formulaInput.focus();
+  const start = formulaInput.selectionStart ?? formulaInput.value.length;
+  const end = formulaInput.selectionEnd ?? formulaInput.value.length;
+  const val = formulaInput.value;
+  formulaInput.value = val.slice(0, start) + sym + val.slice(end);
+  const newPos = start + sym.length;
+  formulaInput.setSelectionRange(newPos, newPos);
+}
+
+function deleteLast() {
+  formulaInput.focus();
+  const start = formulaInput.selectionStart ?? formulaInput.value.length;
+  const end = formulaInput.selectionEnd ?? formulaInput.value.length;
+  const val = formulaInput.value;
+  if (start !== end) {
+    formulaInput.value = val.slice(0, start) + val.slice(end);
+    formulaInput.setSelectionRange(start, start);
+  } else if (start > 0) {
+    formulaInput.value = val.slice(0, start - 1) + val.slice(start);
+    formulaInput.setSelectionRange(start - 1, start - 1);
+  }
+}
+
+function clearInput() {
+  formulaInput.focus();
+  formulaInput.value = '';
+  formulaInput.setSelectionRange(0, 0);
+}
+
+function toggleKeyboard() {
+  const kb = document.getElementById('keyboard');
+  const btn = document.getElementById('kbToggle');
+  kb.classList.toggle('collapsed');
+  btn.textContent = kb.classList.contains('collapsed') ? 'развернуть ▼' : 'свернуть ▲';
+}
+
+// === ИГРОВАЯ ЛОГИКА ===
+function normalize(s) {
+  return s.replace(/\s+/g, '').toLowerCase();
+}
+
+function calcDifficulty(raw) {
+  const s = raw.trim();
+  if (s.length === 0) return 0;
+
+  const uniqueChars = new Set(s.replace(/\s/g, ''));
+  let score = uniqueChars.size;
+
+  const fancy = ['²','³','⁴','⁵','⁶','⁷','⁸','⁹','⁰','¹','√','∫','∑','∏','∂','∇','∞','π','ℏ','ħ','Δ','Σ','Ω','Φ','Ψ','α','β','γ','δ','ε','θ','φ','ψ','ω','μ','ρ','σ','λ','≥','≤','≠','≈','×','÷','±','₁','₂','₃','₄','Ĥ','∮','⊗','⊕','†','⟨','⟩'];
+  for (const c of s) if (fancy.includes(c)) score += 2;
+
+  if (s.length > 10) score += Math.floor((s.length - 10) / 2);
+  if (s.includes('=')) score += 3;
+  if (s.length < 3) score = Math.max(0, score - 2);
+
+  return Math.max(1, Math.floor(score));
+}
+
+function updateHP() {
+  const pct = Math.max(0, hp / MAX_HP * 100);
+  hpFill.style.width = pct + '%';
+  hpText.textContent = `${Math.max(0, hp)} / ${MAX_HP}`;
+
+  if (hp > 70) oleg.textContent = '🧑‍🏫';
+  else if (hp > 40) oleg.textContent = '😰';
+  else if (hp > 15) oleg.textContent = '😫';
+  else if (hp > 0) oleg.textContent = '🤕';
+  else oleg.textContent = '💀';
+}
+
+function addHistory(formula, dmg) {
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  item.innerHTML = `<span class="formula-name">${formula}</span><span class="dmg">−${dmg}</span>`;
+  history.insertBefore(item, history.firstChild);
+}
+
+function showDamage(dmg, x, y) {
+  const popup = document.createElement('div');
+  popup.className = 'damage-popup';
+  popup.textContent = `−${dmg}`;
+  popup.style.left = x + 'px';
+  popup.style.top = y + 'px';
+  arena.appendChild(popup);
+  setTimeout(() => popup.remove(), 1200);
+}
+
+function throwFormula() {
+  if (hp <= 0) return;
+  const raw = formulaInput.value.trim();
+  if (!raw) {
+    formulaInput.focus();
+    return;
+  }
+
+  const key = normalize(raw);
+  if (usedFormulas.has(key)) {
+    showToast('⚠️ Эта формула уже использована! Придумай новую.', raw);
+    formulaInput.focus();
+    return;
+  }
+
+  const dmg = calcDifficulty(raw);
+  usedFormulas.add(key);
+
+  thrower.classList.add('throwing');
+  setTimeout(() => thrower.classList.remove('throwing'), 500);
+
+  const fly = document.createElement('div');
+  fly.className = 'flying-formula';
+  fly.textContent = raw;
+  const arenaRect = arena.getBoundingClientRect();
+  const throwerRect = thrower.getBoundingClientRect();
+  fly.style.left = (throwerRect.left - arenaRect.left + throwerRect.width/2) + 'px';
+  fly.style.top = (throwerRect.top - arenaRect.top + throwerRect.height/2) + 'px';
+  arena.appendChild(fly);
+
+  requestAnimationFrame(() => {
+    const olegRect = oleg.getBoundingClientRect();
+    fly.style.left = (olegRect.left - arenaRect.left + olegRect.width/2 - 30) + 'px';
+    fly.style.top = (olegRect.top - arenaRect.top + olegRect.height/2) + 'px';
+    fly.style.transform = 'scale(1.5) rotate(' + (Math.random()*40-20) + 'deg)';
+  });
+
+  setTimeout(() => {
+    fly.remove();
+    hp -= dmg;
+    if (dmg > maxDifficulty) maxDifficulty = dmg;
+    document.getElementById('lastDmg').textContent = dmg;
+    document.getElementById('usedCount').textContent = usedFormulas.size;
+    document.getElementById('maxDiff').textContent = maxDifficulty;
+
+    oleg.classList.add('hurt');
+    setTimeout(() => oleg.classList.remove('hurt'), 400);
+
+    const olegRect = oleg.getBoundingClientRect();
+    showDamage(dmg, olegRect.left - arenaRect.left + olegRect.width/2, olegRect.top - arenaRect.top);
+
+    updateHP();
+    addHistory(raw, dmg);
+
+    if (hp <= 0) {
+      hp = 0;
+      updateHP();
+      oleg.classList.add('dead');
+      msgTitle.textContent = '🏆 ПОБЕДА!';
+      msgText.innerHTML = `Олег Юрьевич нокаутирован!<br>Формул использовано: <b>${usedFormulas.size}</b><br>Максимальный урон за раз: <b>${maxDifficulty}</b>`;
+      message.classList.add('show');
+    }
+  }, 800);
+
+  formulaInput.value = '';
+  formulaInput.focus();
+}
+
+function resetGame() {
+  hp = MAX_HP;
+  usedFormulas.clear();
+  maxDifficulty = 0;
+  history.innerHTML = '';
+  document.getElementById('lastDmg').textContent = '—';
+  document.getElementById('usedCount').textContent = '0';
+  document.getElementById('maxDiff').textContent = '0';
+  oleg.classList.remove('dead', 'hurt');
+  message.classList.remove('show');
+  toast.classList.remove('show');
+  if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+  updateHP();
+  formulaInput.value = '';
+  formulaInput.focus();
+}
+
+formulaInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') throwFormula();
+});
+
+// Инициализация
+renderKeyboardTabs();
+renderKeyboardGrid();
+updateHP();
+formulaInput.focus();
+</script>
+</body>
+</html>
